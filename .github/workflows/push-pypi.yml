@@ -48,6 +48,7 @@ jobs:
       - name: build
         run: |
           python -m pip install --upgrade pip
+          pip install build wheel setuptools_scm 
           make wheel
 
       - name: topypi

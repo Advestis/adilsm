@@ -1,0 +1,30 @@
+Metadata-Version: 2.1
+Name: adilsm
+Version: 2.dev3+ge805e47.d20240311
+Summary: {description}
+Home-page: https://github.com/Advestis/adilsm
+Author: Mazars
+Author-email: victor.chemla@mazars.fr
+License: MIT
+Project-URL: Bug Tracker, https://github.com/Advestis/adilsm/issues
+Project-URL: Documentation, https://advestis.github.io/adilsm
+Project-URL: Source Code, https://github.com/Advestis/adilsm/
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Unix
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: setuptools>=61
+Requires-Dist: adnmtf==0.1.164
+
+# adilsm pkg
+
+# Install
+
+```bash
+pip install asilsm
+```

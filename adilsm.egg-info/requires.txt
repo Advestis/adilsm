@@ -1,0 +1,2 @@
+setuptools>=61
+adnmtf==0.1.164
