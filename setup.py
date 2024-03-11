@@ -14,7 +14,4 @@ setup(
     description=f"{description}",
     packages=find_packages(),
     install_requires=requirements,
-    # include_package_data: to install data from MANIFEST.in
-    include_package_data=True,
-    zip_safe=False,
 )
