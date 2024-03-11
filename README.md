@@ -3,5 +3,5 @@
 # Install
 
 ```bash
-pip install asilsm
+pip install adilsm
 ```
