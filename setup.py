@@ -7,13 +7,7 @@ adnmtf==0.1.164
 
 setup(
     name="adilsm",
-    setup_requires=["setuptools_scm"],
-    use_scm_version={
-        "write_to": "version.txt",
-        "root": ".",
-        "relative_to": __file__,
-    },
-    version=versioneer.get_version(),
+    version='0.0.1',
     author="Mazars",
     author_email="victor.chemla@mazars.fr",
     description="{description}",
