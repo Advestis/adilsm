@@ -48,21 +48,7 @@ jobs:
       - name: build
         run: |
           python -m pip install --upgrade pip
-          # versioneer gets the latest version from number of commits since tag
-          pip install --upgrade --upgrade-strategy eager .
-          # use this version to make a NEW tag
-          version=$(python -c '
-          import versioneer
-          v = versioneer.get_version()
-          ncommits = v.split("+")[1].split(".")[0]
-          tag = v.split("+")[0]
-          version = ".".join([tag, ncommits])
-          print(version)
-          ')
-          git tag v$version
-          echo "Version is $version"
-          python setup.py version
-          python setup.py sdist
+          make wheel
 
       - name: topypi
         uses: pypa/gh-action-pypi-publish@master
