@@ -1,6 +1,7 @@
 from setuptools import find_packages, setup
 
 requirements = """
+setuptools>=61
 adnmtf==0.1.164
 """
 
