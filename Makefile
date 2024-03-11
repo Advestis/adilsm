@@ -12,6 +12,7 @@ install: clean wheel
 
 wheel: clean
 	@python3 -m build --wheel
+	@python3 setup.py sdist
 
 wheel_upload: clean wheel
 	@python3 -m twine upload dist/*
