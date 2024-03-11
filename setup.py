@@ -1,5 +1,5 @@
 from setuptools import find_packages, setup
-
+import versioneer
 requirements = """
 setuptools>=61
 adnmtf==0.1.164
@@ -13,6 +13,7 @@ setup(
         "root": ".",
         "relative_to": __file__,
     },
+    version=versioneer.get_version(),
     author="Mazars",
     author_email="victor.chemla@mazars.fr",
     description="{description}",
