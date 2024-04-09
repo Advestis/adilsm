@@ -2,6 +2,8 @@ from adnmtf import NMF, NTF
 import pandas as pd
 import numpy as np
 
+print("coucou")
+
 def format_loadings(h4, list_columns):
     # Format loadings
     df_h4 = pd.DataFrame(data=h4)
@@ -55,7 +57,7 @@ def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_s
         h4_score = h4_sparse[i1:i2, :].copy()
         m0_score = m0_nan_0[:, i1:i2]
         m0_weight_score = m0_weight[:, i1:i2]
-        i1=i2
+        i1 = i2
 
         # Apply multiplicative updates to preserve h sparsity   
         for _ in range(0, max_iter_mult):
@@ -100,23 +102,19 @@ def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_s
 
     return h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score
 
-def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[int], norm_m0:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
+def ism(Xs:list[np.array], n_embedding:int, n_themes:int, norm_columns:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
         max_iter_integrate:int=20, max_iter_mult:int=200, fast_mult_rules:bool=True, update_h4_ism:bool=False, sparsity_coeff:float=.8):
     """Estimate ISM model
 
     Parameters
     ----------
-    m0: NDArray
-        Matrix of views, concatenated horizontally.
+    Xs: List of NDArray
+        List of matrices of views.
     n_embedding: integer
         Dimension of the embedding space.
     n_themes: integer
         Dimension of the latent space.
-    n_scores: integer
-        Number of views.
-    n_items: integer
-        List of numbers of attributes (features) per view
-    norm_m0: boolean
+    norm_columns: boolean
         Scale each column of the concatenated matrix
     max_iter: integer, default: 200
         Maximum number of iterations.    
@@ -144,7 +142,15 @@ def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[i
 
     Returns
     -------
-    ISM decomposition W, H*, Q and view mapping matrix H
+    Dictionary
+    ilsm_result['Hv']: View-mapping
+    ilsm_result['Hv_sparse']: Sparse view-mapping
+    ilsm_result['HHII']: Number of non-negligable values by Hv component
+    ilsm_result['W']: ISM meta-scores
+    ilsm_result['H']: NTF loadings in latent space
+    ilsm_result['Q']: NTF view loadings
+    ilsm_result['EMBEDDING']: Embedded views (concatenated)
+    ilsm_result['NORMED_VIEWS']: Normed views (concatenated)
 
     Example
     -------
@@ -157,21 +163,38 @@ def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[i
     ----------
     Fogel, P., Boldina, G., Augé, F., Geissler, C., & Luta, G. (2024).
     ISM: A New Space-Learning Model for Heterogenous Multi-view Data Reduction, Visualization and Clustering.
-    Preprints. https://doi.org/10.20944/preprints202402.1001.v1
+    Preprints. https://doi.org/10.20944/preprints202402.1001.v2
     """
-     
+    
+    Xs_concat = Xs[0].copy()
+    for X in Xs[1:]:
+        Xs_concat = np.hstack((Xs_concat, X))
+
+    m0 = Xs_concat
+
+    n_items = [Xs[i].shape[1] for i in range(len(Xs))]
+    n_scores = len(n_items)
+
     m0_nan_0 = m0.copy()
 
     # create m0_weight with ones and zeros if not_missing/missing value
     m0_weight = np.where(np.isnan(m0), 0, 1)
     m0_nan_0[np.isnan(m0_nan_0)]=0
 
-    if norm_m0 is True:
+    if norm_columns is True:
         #Scale each column of m0
         max_values = np.max(m0_nan_0, axis=0)
         # # Replace maximum values equal to 0 with 1
         m0 = np.divide(m0, np.where(max_values == 0, 1, max_values))
         m0_nan_0 = np.divide(m0_nan_0, np.where(max_values == 0, 1, max_values))
+        Xs_norm = []
+        i1 = 0
+        for i_score in range(n_scores):
+            i2 = i1+n_items[i_score]
+            Xs_norm.append(m0[:,i1:i2])
+            i1 = i2
+    else:
+        Xs_norm = Xs
 
     # Initial Embedding
     my_nmfmodel = NMF(n_components=n_embedding, leverage=None, max_iter=max_iter, tol=tol, verbose=verbose, random_state=random_state)
@@ -188,10 +211,10 @@ def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[i
     # Embed using scores w4 found in preliminary NMF and initialize themes through NTF       
     h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
         integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4, None, None, n_scores, n_items, n_themes, update_h4_ism=True,
-                         max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)
+                         max_iter_mult=max_iter_mult, fast_mult_rules=fast_mult_rules, sparsity_coeff=sparsity_coeff)
     
     error = np.linalg.norm(m0 -  w4_ism @ h4_updated_sparse.T) / np.linalg.norm(m0)
-    # print('error ism before straightening: ',round(error, 2))
+    print('error ism before straightening: ',round(error, 2))
 
     # Iterate embedding with themes subtensor until sparsity becomes stable 
     flag = 0
@@ -202,11 +225,11 @@ def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[i
         if iter_integrate == 0:               
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
                 integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, np.identity(n_themes), q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
-                                 max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)      
+                                 max_iter_mult=max_iter_mult, fast_mult_rules=fast_mult_rules, sparsity_coeff=sparsity_coeff)      
         else:
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
                 integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, h4_ism, q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
-                                 max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)    
+                                 max_iter_mult=max_iter_mult, fast_mult_rules=fast_mult_rules, sparsity_coeff=sparsity_coeff)    
                 
         if (hhii_updated == hhii_updated_0).all():
             flag+=1
@@ -216,20 +239,44 @@ def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[i
         if flag==3:
             break
 
+    Xs_emb = []
+    i1 = 0
+    for i_score in range(n_scores):
+        i2 = i1+n_embedding
+        Xs_emb.append(tensor_score[:,i1:i2])
+        i1 = i2
+
+    hv = []
+    hv_sparse = []
+    i1 = 0
+    for i_score in range(n_scores):
+        i2 = i1+n_items[i_score]
+        hv.append(h4_updated[i1:i2,:])
+        hv_sparse.append(h4_updated_sparse[i1:i2,:])
+        i1 = i2
+
     error = np.linalg.norm(m0 -  w4_ism @ h4_updated_sparse.T) / np.linalg.norm(m0)
-    # print('error ism after straightening: ',round(error, 2))
+    print('error ism after straightening: ',round(error, 2))
+    ilsm_result = {}
+    ilsm_result['HV'] = hv
+    ilsm_result['HV_SPARSE'] = hv_sparse
+    ilsm_result['HHII'] = hhii_updated
+    ilsm_result['W'] = w4_ism
+    ilsm_result['H'] = h4_ism
+    ilsm_result['Q'] = q4_ism
+    ilsm_result['EMBEDDING'] = Xs_emb
+    ilsm_result['NORMED_VIEWS'] = Xs_norm
 
-    return h4_updated, h4_updated_sparse, w4_ism, h4_ism, q4_ism, tensor_score, m0
+    return ilsm_result
 
-
-def ism_expand(m0, h4_sparse, h4_ism, q4_ism, n_themes, n_scores, n_items, max_iter=200, tol=1.e-6, verbose=-1, random_state=0, 
-       max_iter_mult=200):
+def ism_expand(Xs:list[np.array], h4_sparse:float, h4_ism:float, q4_ism:float, n_themes:int, norm_features:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
+       max_iter_mult:int=200):
     """Expand meta-scores to new observations
 
     Parameters
     ----------
-    m0: float
-        Matrix of views, concatenated horizontally.
+    Xs: List of NDArray
+        List of matrices of views.
     h4_sparse: float
         View-mapping matrix H.
     h4_ism: float
@@ -238,12 +285,10 @@ def ism_expand(m0, h4_sparse, h4_ism, q4_ism, n_themes, n_scores, n_items, max_i
         View loading Q.
     n_themes:
         Dimension of the latent space.
-    n_scores: integer
-        Number of views.
-    n_items: integer
-        List of numbers of attributes (features) per view
     leverage:  None | 'standard' | 'robust', default 'standard'
         Calculate leverage of W and H rows on each component.
+    norm_features: boolean
+        Scale each column of the concatenated matrix
     max_iter: integer, default: 200
         Maximum number of iterations.    
     tol: float, default: 1e-6
@@ -278,17 +323,28 @@ def ism_expand(m0, h4_sparse, h4_ism, q4_ism, n_themes, n_scores, n_items, max_i
     Preprints. https://doi.org/10.20944/preprints202402.1001.v1
     """
     EPSILON = np.finfo(np.float32).eps
-    #Scale each column of m0
+
+    Xs_concat = Xs[0].copy()
+    for X in Xs[1:]:
+        Xs_concat = np.hstack((Xs_concat, X))
+
+    m0 = Xs_concat
+
+    n_items = [Xs[i].shape[1] for i in range(len(Xs))]
+    n_scores = len(n_items)
+
     m0_nan_0 = m0.copy()
 
     # create m0_weight with ones and zeros if not_missing/missing value
     m0_weight = np.where(np.isnan(m0), 0, 1)
     m0_nan_0[np.isnan(m0_nan_0)]=0
 
-    max_values = np.max(m0_nan_0, axis=0)
-    # Replace maximum values equal to 0 with 1
-    m0 = np.divide(m0, np.where(max_values == 0, 1, max_values))
-    m0_nan_0 = np.divide(m0_nan_0, np.where(max_values == 0, 1, max_values))
+    if norm_features is True:
+        #Scale each column of m0
+        max_values = np.max(m0_nan_0, axis=0)
+        # Replace maximum values equal to 0 with 1
+        m0 = np.divide(m0, np.where(max_values == 0, 1, max_values))
+        m0_nan_0 = np.divide(m0_nan_0, np.where(max_values == 0, 1, max_values))
     
     i1 = 0
 

@@ -1,6 +1,7 @@
 from setuptools import find_packages, setup
 requirements = """
 adnmtf==0.1.164
+scipy==1.9.1 
 """
 
 description = "Integrated Longitudinal Multi Source Model"
