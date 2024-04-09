@@ -2,7 +2,7 @@ from adnmtf import NMF, NTF
 import pandas as pd
 import numpy as np
 
-print("coucou")
+# print("coucou")
 
 def format_loadings(h4, list_columns):
     # Format loadings

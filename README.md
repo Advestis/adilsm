@@ -8,6 +8,10 @@ pip install adilsm
 
 ILSM is Integrated Latent Multi Source Model.
 
+# Reference
+
+https://www.preprints.org/manuscript/202402.1001/v2
+
 # Usage
 
 ```python
