@@ -41,7 +41,7 @@ def generate_h4_sparse(h4, q4_ism, n_items, n_comp, n_scores, sparsity_coeff=.8)
     return h4_sparse, hhii
 
 def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_scores, n_items, n_themes, update_h4_ism=False,
-                     max_iter_mult=200, sparsity_coeff=.8):
+                     max_iter_mult=200, fast_mult_rules=True, sparsity_coeff=.8):
     
     EPSILON = np.finfo(np.float32).eps
 
@@ -60,18 +60,14 @@ def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_s
         # Apply multiplicative updates to preserve h sparsity   
         for _ in range(0, max_iter_mult):
             # Weighted multiplicative rules
-            # m0_score_est = (m0_score / (w4_score @ h4_score.T+EPSILON))*m0_weight_score
-            # h4_score *= (w4_score.T @ m0_score_est).T
-            # w4_score *= m0_score_est @ h4_score 
-           
-            m0_score_est = (w4_score @ h4_score.T)*m0_weight_score
-            h4_score *= ((w4_score.T @ m0_score) / (w4_score.T @ m0_score_est + EPSILON)).T
-            w4_score *= (m0_score @ h4_score / (m0_score_est @ h4_score + EPSILON))
+            if fast_mult_rules:
+                m0_score_est = (w4_score @ h4_score.T)*m0_weight_score
+                h4_score *= ((w4_score.T @ m0_score) / (w4_score.T @ m0_score_est + EPSILON)).T
+                w4_score *= (m0_score @ h4_score / (m0_score_est @ h4_score + EPSILON))
+            else:
+                h4_score *= ((w4_score.T @ m0_score) / (w4_score.T @ ((w4_score @ h4_score.T)*m0_weight_score) + EPSILON)).T
+                w4_score *= (m0_score @ h4_score / ((m0_weight_score*(w4_score @ h4_score.T)) @ h4_score + EPSILON))
 
-            # h4_score *= ((w4_score.T @ m0_score) / (w4_score.T @ ((w4_score @ h4_score.T)*m0_weight_score) + EPSILON)).T
-            # w4_score *= (m0_score @ h4_score / ((m0_weight_score*(w4_score @ h4_score.T)) @ h4_score + EPSILON))
-
-        # print(h4_score)
         # Normalize w4_score by max column and update h4_score
         max_values = np.max(w4_score, axis=0)
         # Replace maximum values equal to 0 with 1
@@ -104,13 +100,13 @@ def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_s
 
     return h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score
 
-def ism(m0, n_embedding, n_themes, n_scores, n_items, norm_m0 = True, max_iter=200, tol=1.e-6, verbose=-1, random_state=0, 
-        max_iter_integrate=20, max_iter_mult=200, update_h4_ism=False, sparsity_coeff=.8):
+def ism(m0:np.array, n_embedding:int, n_themes:int, n_scores:int, n_items:list[int], norm_m0:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
+        max_iter_integrate:int=20, max_iter_mult:int=200, fast_mult_rules:bool=True, update_h4_ism:bool=False, sparsity_coeff:float=.8):
     """Estimate ISM model
 
     Parameters
     ----------
-    m0: float
+    m0: NDArray
         Matrix of views, concatenated horizontally.
     n_embedding: integer
         Dimension of the embedding space.
@@ -137,6 +133,8 @@ def ism(m0, n_embedding, n_themes, n_scores, n_items, norm_m0 = True, max_iter=2
         Max number of iterations during the straightening process.
     max_iter_mult: integer, default: 200
         Max number of iterations of NMF multiplicative updates during the embedding process.
+    fast_mult_rules: boolean, default True
+        Use common matrix estimate in w and h updates
     update_h4_ism: boolean, default False
         Update or not the NTF factoring matrix H*.
     sparsity_coeff:
@@ -190,7 +188,7 @@ def ism(m0, n_embedding, n_themes, n_scores, n_items, norm_m0 = True, max_iter=2
     # Embed using scores w4 found in preliminary NMF and initialize themes through NTF       
     h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
         integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4, None, None, n_scores, n_items, n_themes, update_h4_ism=True,
-                         max_iter_mult=max_iter_mult, sparsity_coeff=sparsity_coeff)
+                         max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)
     
     error = np.linalg.norm(m0 -  w4_ism @ h4_updated_sparse.T) / np.linalg.norm(m0)
     # print('error ism before straightening: ',round(error, 2))
@@ -204,11 +202,11 @@ def ism(m0, n_embedding, n_themes, n_scores, n_items, norm_m0 = True, max_iter=2
         if iter_integrate == 0:               
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
                 integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, np.identity(n_themes), q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
-                                 max_iter_mult=max_iter_mult, sparsity_coeff=sparsity_coeff)      
+                                 max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)      
         else:
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
                 integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, h4_ism, q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
-                                 max_iter_mult=max_iter_mult, sparsity_coeff=sparsity_coeff)    
+                                 max_iter_mult=max_iter_mult, fast_mult_rules=True, sparsity_coeff=sparsity_coeff)    
                 
         if (hhii_updated == hhii_updated_0).all():
             flag+=1
@@ -343,7 +341,7 @@ def ism_expand(m0, h4_sparse, h4_ism, q4_ism, n_themes, n_scores, n_items, max_i
             tensor_score[missing_rows, i1:i2] *= np.where(q4_ism[i_score, :] > 0, 1, 0)
 
     # Apply NTF with prescribed number of themes and update themes
-    my_ntfmodel = NTF(n_components=n_themes, leverage=leverage, init_type=2, max_iter=max_iter, tol=tol, verbose=verbose, random_state=random_state)
+    my_ntfmodel = NTF(n_components=n_themes, leverage=None, init_type=2, max_iter=max_iter, tol=tol, verbose=verbose, random_state=random_state)
     estimator_ = my_ntfmodel.fit_transform(tensor_score, h=h4_ism, q=q4_ism, update_h=False, update_q=True, n_blocks=n_scores)
     w4_ism = estimator_.w
 
