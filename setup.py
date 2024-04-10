@@ -4,7 +4,7 @@ adnmtf==0.1.164
 scipy==1.9.1 
 """
 
-description = "Integrated Longitudinal Multi Source Model"
+description = "Integrated Latent Multi Source Model"
 
 setup(
     name="adilsm",
