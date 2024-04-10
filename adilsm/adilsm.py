@@ -1,8 +1,10 @@
-from adnmtf import NMF, NTF
-import pandas as pd
-import numpy as np
+from adnmtf import NMF, NTF # type: ignore
+import pandas as pd # type: ignore
+import numpy as np # type: ignore
+import pkg_resources  # part of setuptools
 
-# print("coucou")
+version = pkg_resources.require("adilsm")[0].version
+print("adilsm version="+version)
 
 def format_loadings(h4, list_columns):
     # Format loadings
@@ -103,7 +105,7 @@ def integrate_scores(m0_nan_0, m0_weight, h4_sparse, w4_ism, h4_ism, q4_ism, n_s
     return h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score
 
 def ism(Xs:list[np.array], n_embedding:int, n_themes:int, norm_columns:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
-        max_iter_integrate:int=20, max_iter_mult:int=200, fast_mult_rules:bool=True, update_h4_ism:bool=False, sparsity_coeff:float=.8):
+        max_iter_integrate:int=20, max_iter_mult:int=200, fast_mult_rules:bool=True, update_h_ism:bool=False, sparsity_coeff:float=.8):
     """Estimate ISM model
 
     Parameters
@@ -133,7 +135,7 @@ def ism(Xs:list[np.array], n_embedding:int, n_themes:int, norm_columns:bool = Tr
         Max number of iterations of NMF multiplicative updates during the embedding process.
     fast_mult_rules: boolean, default True
         Use common matrix estimate in w and h updates
-    update_h4_ism: boolean, default False
+    update_h_ism: boolean, default False
         Update or not the NTF factoring matrix H*.
     sparsity_coeff:
         Enhance H sparsity by a multiplicative factor applied to the inverse HHI.
@@ -224,11 +226,11 @@ def ism(Xs:list[np.array], n_embedding:int, n_themes:int, norm_columns:bool = Tr
 
         if iter_integrate == 0:               
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
-                integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, np.identity(n_themes), q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
+                integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, np.identity(n_themes), q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h_ism,
                                  max_iter_mult=max_iter_mult, fast_mult_rules=fast_mult_rules, sparsity_coeff=sparsity_coeff)      
         else:
             h4_updated, h4_updated_sparse, hhii_updated, w4_ism, h4_ism, q4_ism, tensor_score = \
-                integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, h4_ism, q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h4_ism,
+                integrate_scores(m0_nan_0, m0_weight, h4_updated_sparse, w4_ism, h4_ism, q4_ism, n_scores, n_items, n_themes, update_h4_ism=update_h_ism,
                                  max_iter_mult=max_iter_mult, fast_mult_rules=fast_mult_rules, sparsity_coeff=sparsity_coeff)    
                 
         if (hhii_updated == hhii_updated_0).all():
@@ -269,7 +271,7 @@ def ism(Xs:list[np.array], n_embedding:int, n_themes:int, norm_columns:bool = Tr
 
     return ilsm_result
 
-def ism_expand(Xs:list[np.array], h4_sparse:float, h4_ism:float, q4_ism:float, n_themes:int, norm_features:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
+def ism_expand(Xs:list[np.array], h4_sparse:float, h4_ism:float, q4_ism:float, n_themes:int, norm_columns:bool = True, max_iter:int=200, tol:float=1.e-6, verbose:int=-1, random_state:int=0, 
        max_iter_mult:int=200):
     """Expand meta-scores to new observations
 
@@ -287,7 +289,7 @@ def ism_expand(Xs:list[np.array], h4_sparse:float, h4_ism:float, q4_ism:float, n
         Dimension of the latent space.
     leverage:  None | 'standard' | 'robust', default 'standard'
         Calculate leverage of W and H rows on each component.
-    norm_features: boolean
+    norm_columns: boolean
         Scale each column of the concatenated matrix
     max_iter: integer, default: 200
         Maximum number of iterations.    
@@ -339,7 +341,7 @@ def ism_expand(Xs:list[np.array], h4_sparse:float, h4_ism:float, q4_ism:float, n
     m0_weight = np.where(np.isnan(m0), 0, 1)
     m0_nan_0[np.isnan(m0_nan_0)]=0
 
-    if norm_features is True:
+    if norm_columns is True:
         #Scale each column of m0
         max_values = np.max(m0_nan_0, axis=0)
         # Replace maximum values equal to 0 with 1

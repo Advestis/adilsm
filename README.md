@@ -10,7 +10,7 @@ ILSM is Integrated Latent Multi Source Model.
 
 # Reference
 
-https://www.preprints.org/manuscript/202402.1001/v2
+https://www.preprints.org/manuscript/202402.1001/v3
 
 # Usage
 
@@ -35,7 +35,7 @@ A += np.random.uniform(low=0, high=max_noise_level, size=A.shape)
 Xs = [A, B]
 n_embedding, n_themes = [10,10]
 
-ilsm_result = ilsm.ism(Xs, n_embedding, n_themes, norm_columns=False, update_h4_ism=True,
+ilsm_result = ilsm.ism(Xs, n_embedding, n_themes, norm_columns=False, update_h_ism=True,
                                     max_iter_mult=200, fast_mult_rules=True, sparsity_coeff=.8)
 hv = ilsm_result['HV']
 hv_sparse = ilsm_result['HV_SPARSE']
