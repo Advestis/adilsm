@@ -8,7 +8,7 @@ description = "Integrated Longitudinal Multi Source Model"
 
 setup(
     name="adilsm",
-    version='0.0.8',
+    version='0.0.9',
     author="Mazars",
     author_email="victor.chemla@mazars.fr",
     description=f"{description}",
