@@ -10,7 +10,7 @@ ILSM is Integrated Latent Multi Source Model.
 
 # Reference
 
-https://www.preprints.org/manuscript/202402.1001/v3
+https://doi.org/10.36922/aih.3427
 
 # Usage
 
